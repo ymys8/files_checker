@@ -30,13 +30,13 @@ cmake --build .
 ### Сервер
 
 ```bash
-./server --config <путь_к_конфигу> --port <порт>
+./server -c <путь_к_конфигу> -p <порт>
 ```
 
 Пример:
 
 ```bash
-./server --config ../test_data/config.json --port 12345
+./server -c ../test_data/config.json -p 12345
 ```
 
 Конфигурационный файл — JSON со списком паттернов для поиска:
@@ -58,13 +58,13 @@ cmake --build .
 ### Клиент
 
 ```bash
-./client --file <путь_к_файлу> --port <порт>
+./client -f <путь_к_файлу> -p <порт>
 ```
 
 Пример:
 
 ```bash
-./client --file ../test_data/infected.txt --port 12345
+./client -f ../test_data/infected.txt -p 12345
 ```
 
 Возможные ответы клиенту:
