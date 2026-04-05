@@ -1,0 +1,176 @@
+#include "server.h"
+#include "pattern_matcher.h"
+
+#include <atomic>
+#include <csignal>
+#include <sys/socket.h>
+#include <stdexcept>
+#include <netinet/in.h>
+#include <iostream>
+#include <sys/wait.h>
+#include <fcntl.h>
+
+namespace
+{
+    std::atomic<bool> g_running{true};
+    int g_listen_fd = -1;
+
+    void signalHandler(int sig)
+    {
+        g_running.store(false);
+        // Чтобы accept не блокировал процесс при получении сигнала
+        if (g_listen_fd >= 0)
+        {
+            shutdown(g_listen_fd, SHUT_RDWR);
+        }
+    }
+}
+
+TcpServer::TcpServer(uint16_t port, const std::vector<std::string> &patterns) : listen_sock_fd(-1), checkPatterns(patterns), statisticManager(patterns)
+{
+    std::signal(SIGINT, signalHandler);
+    std::signal(SIGTERM, signalHandler);
+    std::signal(SIGPIPE, SIG_IGN);
+    std::signal(SIGCHLD, [](int sig)
+                { while (waitpid(-1, nullptr, WNOHANG) > 0); });
+
+    listen_sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listen_sock_fd < 0)
+    {
+        throw std::runtime_error("Не удалось создать сокет для прослушивания");
+    }
+    g_listen_fd = listen_sock_fd;
+
+    int opt = 1;
+    setsockopt(listen_sock_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = INADDR_ANY;
+
+    if (bind(listen_sock_fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) < 0)
+    {
+        throw std::runtime_error("Не удалось привязать порт к сокету: " + std::to_string(port));
+    }
+
+    if (listen(listen_sock_fd, SOMAXCONN) < 0)
+    {
+        throw std::runtime_error("Не удалось установить прослушивание для сокета");
+    }
+
+    statsThread = std::thread(&TcpServer::threadFunc, this);
+}
+
+TcpServer::~TcpServer()
+{
+    int fd = open(FIFO_PATH, O_RDONLY | O_NONBLOCK);
+    if (fd >= 0) 
+    {
+        close(fd);
+    }
+
+    if (statsThread.joinable()) 
+    {
+        statsThread.join();
+    }
+
+    if (listen_sock_fd != -1)
+    {
+        close(listen_sock_fd);
+        listen_sock_fd = -1;
+    }
+}
+
+void TcpServer::run()
+{
+    while (g_running.load())
+    {
+        int clientFd = accept(listen_sock_fd, nullptr, nullptr);
+        if (clientFd < 0)
+        {
+            continue;
+        }
+
+        pid_t pid = fork();
+        if (pid < 0)
+        {
+            std::cerr << "Не удалось создать дочерний процесс" << std::endl;
+            close(clientFd);
+            continue;
+        }
+
+        if (pid == 0)
+        {
+            close(listen_sock_fd);
+            handleClient(clientFd);
+            _exit(0);
+        }
+
+        close(clientFd);
+    }
+
+    while (waitpid(-1, nullptr, 0) > 0)
+        ;
+}
+
+void TcpServer::handleClient(int clientFd)
+{
+    uint32_t netSize = 0;
+    ssize_t n = recv(clientFd, &netSize, sizeof(netSize), MSG_WAITALL);
+    if (n != sizeof(netSize))
+    {
+        close(clientFd);
+        return;
+    }
+    uint32_t fileSize = ntohl(netSize);
+
+    std::string content(fileSize, '\0');
+    ssize_t received = recv(clientFd, content.data(), fileSize, MSG_WAITALL);
+    if (received != static_cast<ssize_t>(fileSize))
+    {
+        close(clientFd);
+        return;
+    }
+
+    PatternMatcher matcher{checkPatterns};
+    auto matches = matcher.match(content);
+
+    std::string response;
+    if (matches.empty())
+    {
+        response = "FILE IS CLEAN\n";
+    }
+    else
+    {
+        response = "INFECTED:";
+        for (const auto &[pattern, count] : matches)
+        {
+            response += " " + pattern + "(" + std::to_string(count) + ")";
+        }
+        response += "\n";
+    }
+
+    size_t totalSent = 0;
+    while (totalSent < response.size())
+    {
+        ssize_t sent = send(clientFd, response.c_str() + totalSent,
+                            response.size() - totalSent, 0);
+        if (sent < 0)
+        {
+            break;
+        }
+        totalSent += sent;
+    }
+    statisticManager.update(matches);
+
+    close(clientFd);
+}
+
+void TcpServer::threadFunc()
+{
+    while (g_running.load()) 
+    {
+        statisticManager.serveStats();
+    }
+}

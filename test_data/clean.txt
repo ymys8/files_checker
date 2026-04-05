@@ -1,0 +1,4 @@
+Hello, world!
+This is a perfectly safe file.
+Nothing suspicious here, just regular text.
+int main() { return 0; }
