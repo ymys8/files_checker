@@ -1,20 +1,17 @@
 project(client LANGUAGES CXX)
 
-set(PROJECT_SOURCES
-    src/main.cpp
+add_library(client_lib STATIC
     src/client.cpp
     src/arg_parser.cpp
     src/file_reader.cpp
+)
 
-    include/client.h
-    include/arg_parser.h
-    include/file_reader.h
+target_include_directories(client_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(${PROJECT_NAME}
-    ${PROJECT_SOURCES}
+    src/main.cpp
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE 
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
+target_link_libraries(${PROJECT_NAME} PRIVATE client_lib)

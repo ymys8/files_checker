@@ -1,29 +1,25 @@
 project(server LANGUAGES CXX)
 
-set(PROJECT_SOURCES
-    src/main.cpp
+add_library(server_lib STATIC
     src/arg_parser.cpp
     src/config_reader.cpp
     src/pattern_matcher.cpp
     src/server.cpp
     src/statistic_manager.cpp
-
-    include/arg_parser.h
-    include/config_reader.h
-    include/pattern_matcher.h
-    include/server.h
-    include/statistic_manager.h
 )
 
-add_executable(${PROJECT_NAME}
-    ${PROJECT_SOURCES}
-)
-
-target_include_directories(${PROJECT_NAME} PRIVATE 
+target_include_directories(server_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE 
+target_link_libraries(server_lib PUBLIC
     common
     nlohmann_json::nlohmann_json
+    pthread
 )
+
+add_executable(${PROJECT_NAME}
+    src/main.cpp
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE server_lib)
