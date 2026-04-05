@@ -12,18 +12,13 @@ std::string FileReader::read(const std::string &filePath)
         throw std::runtime_error("Не удалось открыть файл: " + filePath);
     }
 
-    std::string fileContent;
-    std::string line;
-    while (std::getline(file, line))
-    {
-        line.append("\n");
-        fileContent.append(line);
-    }
+    std::ostringstream ss;
+    ss << file.rdbuf();
 
-    if (file.fail() && !file.eof())
+    if (file.bad())
     {
         throw std::runtime_error("Ошибка при чтении файла: " + filePath);
     }
 
-    return fileContent;
+    return ss.str();
 }

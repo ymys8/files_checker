@@ -143,7 +143,17 @@ void TcpServer::handleClient(int clientFd)
         response += "\n";
     }
 
-    send(clientFd, response.c_str(), response.size(), 0);
+    size_t totalSent = 0;
+    while (totalSent < response.size())
+    {
+        ssize_t sent = send(clientFd, response.c_str() + totalSent,
+                            response.size() - totalSent, 0);
+        if (sent < 0)
+        {
+            break;
+        }
+        totalSent += sent;
+    }
     statisticManager.update(matches);
 
     close(clientFd);
