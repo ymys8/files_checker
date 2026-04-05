@@ -13,10 +13,16 @@
 namespace
 {
     std::atomic<bool> g_running{true};
+    int g_listen_fd = -1;
 
     void signalHandler(int sig)
     {
         g_running.store(false);
+        // Чтобы accept не блокировал процесс при получении сигнала
+        if (g_listen_fd >= 0)
+        {
+            shutdown(g_listen_fd, SHUT_RDWR);
+        }
     }
 }
 
@@ -24,6 +30,7 @@ TcpServer::TcpServer(uint16_t port, const std::vector<std::string> &patterns) : 
 {
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
+    std::signal(SIGPIPE, SIG_IGN);
     std::signal(SIGCHLD, [](int sig)
                 { while (waitpid(-1, nullptr, WNOHANG) > 0); });
 
@@ -32,6 +39,7 @@ TcpServer::TcpServer(uint16_t port, const std::vector<std::string> &patterns) : 
     {
         throw std::runtime_error("Не удалось создать сокет для прослушивания");
     }
+    g_listen_fd = listen_sock_fd;
 
     int opt = 1;
     setsockopt(listen_sock_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));

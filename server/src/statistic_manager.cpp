@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <cerrno>
 
 namespace
 {
@@ -50,7 +51,7 @@ StatisticManager::StatisticManager(const std::vector<std::string> &patterns)
         throw std::runtime_error("Не удалось создать семафор");
     }
 
-    if (mkfifo(FIFO_PATH, 0644) < 0) 
+    if (mkfifo(FIFO_PATH, 0644) < 0 && errno != EEXIST) 
     {
         munmap(stat, sizeof(SharedStatistic));
         sem_close(sem);

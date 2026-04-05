@@ -3,13 +3,26 @@
 #include <iostream>
 #include <fcntl.h>
 #include <unistd.h>
+#include <poll.h>
 
 int main()
 {
-    int fd = open(FIFO_PATH, O_RDONLY | O_NONBLOCK);
+    int fd = open(FIFO_PATH, O_RDONLY);
     if (fd < 0)
     {
         std::cerr << "Ошибка: сервер не запущен\n";
+        return 1;
+    }
+
+    struct pollfd pfd{};
+    pfd.fd = fd;
+    pfd.events = POLLIN;
+
+    int ready = poll(&pfd, 1, 3000);
+    if (ready <= 0)
+    {
+        std::cerr << "Не удалось получить статистику от сервера\n";
+        close(fd);
         return 1;
     }
 
@@ -24,9 +37,7 @@ int main()
             std::cerr << "Не удалось корректно считать статистику\n";
             close(fd);
             return 1;
-        }
-        if (n == 0)
-            break;
+        }   
         totalRead += n;
     }
     close(fd);
