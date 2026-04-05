@@ -96,7 +96,7 @@ void TcpServer::run()
         {
             close(listen_sock_fd);
             handleClient(clientFd);
-            exit(0);
+            _exit(0);
         }
 
         close(clientFd);

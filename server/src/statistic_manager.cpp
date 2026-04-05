@@ -5,6 +5,8 @@
 #include <cstring>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 namespace
 {
@@ -47,6 +49,14 @@ StatisticManager::StatisticManager(const std::vector<std::string> &patterns)
         munmap(stat, sizeof(SharedStatistic));
         throw std::runtime_error("Не удалось создать семафор");
     }
+
+    if (mkfifo(FIFO_PATH, 0644) < 0) 
+    {
+        munmap(stat, sizeof(SharedStatistic));
+        sem_close(sem);
+        sem_unlink(SEM_NAME);
+        throw std::runtime_error("Не удалось создать FIFO");
+    }
 }
 
 StatisticManager::~StatisticManager()
@@ -63,6 +73,8 @@ StatisticManager::~StatisticManager()
         sem_unlink(SEM_NAME);
         sem = nullptr;
     }
+
+    unlink(FIFO_PATH);
 }
 
 void StatisticManager::update(const std::unordered_map<std::string, size_t> &matches)
