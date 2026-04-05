@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <iostream>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 namespace
 {
@@ -49,10 +50,23 @@ TcpServer::TcpServer(uint16_t port, const std::vector<std::string> &patterns) : 
     {
         throw std::runtime_error("Не удалось установить прослушивание для сокета");
     }
+
+    statsThread = std::thread(&TcpServer::threadFunc, this);
 }
 
 TcpServer::~TcpServer()
 {
+    int fd = open(FIFO_PATH, O_RDONLY | O_NONBLOCK);
+    if (fd >= 0) 
+    {
+        close(fd);
+    }
+
+    if (statsThread.joinable()) 
+    {
+        statsThread.join();
+    }
+
     if (listen_sock_fd != -1)
     {
         close(listen_sock_fd);
@@ -133,4 +147,12 @@ void TcpServer::handleClient(int clientFd)
     statisticManager.update(matches);
 
     close(clientFd);
+}
+
+void TcpServer::threadFunc()
+{
+    while (g_running.load()) 
+    {
+        statisticManager.serveStats();
+    }
 }

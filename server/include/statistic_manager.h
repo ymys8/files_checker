@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <semaphore.h>
-#include <shared_statistics.hpp>
+#include "shared_statistics.hpp"
 
 ///
 class StatisticManager
@@ -17,6 +17,9 @@ public:
 
     ///
     void update(const std::unordered_map<std::string, size_t> &matches);
+
+    /// 
+    void serveStats();
 
 private:
     SharedStatistic *stat = nullptr; ///<

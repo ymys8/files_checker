@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <thread>
 
 ///
 class TcpServer
@@ -22,7 +23,11 @@ private:
     ///
     void handleClient(int clientFd);
 
+    ///
+    void threadFunc();
+
     int listen_sock_fd;                     ///<
     std::vector<std::string> checkPatterns; ///<
-    StatisticManager statisticManager; ///<
+    StatisticManager statisticManager;      ///<
+    std::thread statsThread;    ///< 
 };

@@ -1,9 +1,11 @@
+#pragma once
+
 #include <cstddef>
 
 const int MAX_PATTERNS = 64;
 const int MAX_PATTERN_LEN = 128;
 
-const char* FIFO_PATH = "/tmp/hometask.fifo";
+inline const char* FIFO_PATH = "/tmp/hometask.fifo";
 
 ///
 struct PatternStatistic

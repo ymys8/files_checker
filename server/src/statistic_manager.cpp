@@ -82,3 +82,18 @@ void StatisticManager::update(const std::unordered_map<std::string, size_t> &mat
 
     sem_post(sem);
 }
+
+void StatisticManager::serveStats()
+{
+    int fifoFd = open(FIFO_PATH, O_WRONLY);
+    if (fifoFd < 0)
+    {
+        return;
+    }
+
+    sem_wait(sem);
+    write(fifoFd, stat, sizeof(SharedStatistic));
+    sem_post(sem);
+
+    close(fifoFd);
+}
